@@ -7,6 +7,8 @@ from flask_bcrypt import Bcrypt
 import os
 from dotenv import load_dotenv
 import datetime
+from werkzeug.utils import secure_filename
+
 
 load_dotenv()
 
@@ -35,6 +37,14 @@ jwt = JWTManager(app)
 db = SQLAlchemy()
 db.init_app(app)
 bcrypt = Bcrypt(app)
+
+UPLOAD_FOLDER = os.path.join('static', 'uploads')
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Many-to-Many-tabell för att hantera followers (en följare följer en annan)
 followers = db.Table(
@@ -481,6 +491,27 @@ def unlike_review():
     db.session.commit()
 
     return jsonify({"message": f"Review {review.id} unliked by {user.username}"}), 200
+
+
+@app.route('/upload_image', methods=['POST'])
+def upload_image():
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image provided'}), 400
+
+    file = request.files['image']
+
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+
+        image_url = request.host_url.rstrip('/') + f'/static/uploads/{filename}'
+        return jsonify({'image_url': image_url}), 200
+
+    return jsonify({'error': 'Invalid file type'}), 400
 
 
 # Blocklist loader
