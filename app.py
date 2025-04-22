@@ -11,26 +11,7 @@ import datetime
 load_dotenv()
 
 app = Flask(__name__)
-# app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///demo.db"
-app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JWT_ACCESS_TOKEN_EXPIRES'] = datetime.timedelta(minutes=500)
-
-if "AZURE_POSTGRESQL_CONNECTIONSTRING" in os.environ:
-    conn = os.environ["AZURE_POSTGRESQL_CONNECTIONSTRING"]
-    values = dict(x.split("=") for x in conn.split(' '))
-    user = values['user']
-    host = values['host']azure_project_structure
-    database = values['dbname']
-    password = values['password']
-    db_uri = f'postgresql+psycopg2://{user}:{password}@{host}/{database}'
-    app.config['SQLALCHEMY_DATABASE_URI'] = db_uri 
-    debug_flag = False
-else: # when running locally: use sqlite
-    db_path = os.path.join(os.path.dirname(__file__), 'app.db')
-    db_uri = f'sqlite:///{db_path}'
-    debug_flag = True
-
+app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///demo.db"
 jwt = JWTManager(app)
 db = SQLAlchemy()
 db.init_app(app)
@@ -55,6 +36,7 @@ class User(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     username: Mapped[str] = mapped_column(unique=True)
     password_hash: Mapped[str] = mapped_column(nullable=False)
+    user_description = db.Column(db.String(100), nullable=True)
 
     followers = db.relationship(
         'User',
@@ -114,7 +96,7 @@ class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     drink_name = db.Column(db.String(100), nullable=False)
-    rating = db.Column(db.Integer, nullable=False)
+    rating = db.Column(db.Float, nullable=False)
     review_text = db.Column(db.Text, nullable=True)
     image_url = db.Column(db.String(255), nullable=True)  # Lagrar sökvägen till bilden
     is_recipe = db.Column(db.Boolean, default=False, nullable=False)  # Gör det möjligt för användaren att skicka en post
@@ -145,7 +127,7 @@ class TokenBlocklist(db.Model):
     created_at: Mapped[datetime.datetime] = mapped_column(nullable=False, default=datetime.datetime.utcnow)
 
 
-# Login/Logut/Createuser - handlers 
+# Login/Logut/Create user - handlers 
 @app.route('/user', methods=['POST'])
 def create_user():
     data = request.get_json()
@@ -188,6 +170,31 @@ def logout():
     db.session.add(TokenBlocklist(jti=jti))
     db.session.commit()
     return jsonify({"message": "User successfully logged out"}), 200
+
+
+# Discover/find user - handlers
+@app.route('/discover', methods=['GET'])
+@jwt_required()
+def search():
+    query = request.args.get('query', '')
+
+    if not query:
+        return jsonify({"error": "Query parameter is required"}), 400
+
+    # Sök efter användare där username innehåller sökordet (case-insensitive)
+    results = (
+        User.query
+        .filter(User.username.ilike(f"%{query}%"))
+        .limit(25)
+        .all()
+    )
+
+    return jsonify({
+        "results": [
+            {"user_id": user.id, "username": user.username}
+            for user in results
+        ]
+    }), 200
 
 
 # Following/Unfollowing - handlers
