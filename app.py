@@ -22,8 +22,12 @@ db.init_app(app)
 migrate = Migrate(app, db)
 bcrypt = Bcrypt(app)
 
-UPLOAD_FOLDER = os.path.join('static', 'uploads')
+UPLOAD_FOLDER = '/tmp/uploads'  # Render tillåter bara /tmp för uppladdningar
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+
+# Skapa mappen om den inte finns
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
