@@ -553,7 +553,7 @@ def internal_server_error(error):
 with app.app_context():
     db.create_all()
 
-if __name__ == "__main__":
+ # if __name__ == "__main__":
     # print(f"[DEBUG] Använder databas: {app.config['SQLALCHEMY_DATABASE_URI']}")
     # print("[DEBUG] Kör debug-mode")
     # app.debug = True
