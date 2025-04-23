@@ -140,20 +140,27 @@ class TokenBlocklist(db.Model):
 # Login/Logut/Create user - handlers 
 @app.route('/user', methods=['POST'])
 def create_user():
-    data = request.get_json()
-    if not data or 'username' not in data or 'password' not in data:
-        return jsonify({'error': 'Username and password are required'}), 400
+    try:
+        data = request.get_json()
+        print(data)  # Debug-print
 
-    username = data['username']
-    password = data['password']
-    existing_user = db.session.execute(db.select(User).filter_by(username=username)).scalar_one_or_none()
-    if existing_user:
-        return jsonify({'error': 'Username already exists'}), 400
+        if not data or 'username' not in data or 'password' not in data:
+            return jsonify({'error': 'Username and password are required'}), 400
 
-    new_user = User(username=username, password=password)
-    db.session.add(new_user)
-    db.session.commit()
-    return jsonify({'message': f'User {new_user.username} created', 'user_id': new_user.id}), 200
+        username = data['username']
+        password = data['password']
+        existing_user = db.session.execute(db.select(User).filter_by(username=username)).scalar_one_or_none()
+        if existing_user:
+            return jsonify({'error': 'Username already exists'}), 400
+
+        new_user = User(username=username, password=password)
+        db.session.add(new_user)
+        db.session.commit()
+
+        return jsonify({'message': f'User {new_user.username} created', 'user_id': new_user.id}), 200
+
+    except Exception as e:
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 
 @app.route('/user/login', methods=['POST'])
