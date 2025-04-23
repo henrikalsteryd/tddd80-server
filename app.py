@@ -125,8 +125,8 @@ class Review(db.Model):
     is_recipe = db.Column(db.Boolean, default=False, nullable=False)  # Gör det möjligt för användaren att skicka en post
 
     #Spara plats "city"
-    location_city = db.Column(db.String(100), nullable=False)
-    location_name = db.Column(db.String(100), nullable=False)
+    location_city = db.Column(db.String(100), nullable=True)
+    location_name = db.Column(db.String(100), nullable=True)
 
     # Som standard så är created_at den tiden som databasen sparar den
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
