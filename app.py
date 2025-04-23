@@ -8,6 +8,8 @@ import os
 from dotenv import load_dotenv
 import datetime
 from werkzeug.utils import secure_filename
+from flask_migrate import Migrate
+
 
 
 load_dotenv()
@@ -17,6 +19,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///demo.db"
 jwt = JWTManager(app)
 db = SQLAlchemy()
 db.init_app(app)
+migrate = Migrate(app, db)
 bcrypt = Bcrypt(app)
 
 UPLOAD_FOLDER = os.path.join('static', 'uploads')
