@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import datetime
 from werkzeug.utils import secure_filename
 from flask_migrate import Migrate
+from flask import send_from_directory
 
 
 
@@ -513,6 +514,9 @@ def unlike_review():
 
     return jsonify({"message": f"Review {review.id} unliked by {user.username}"}), 200
 
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 @app.route('/upload_image', methods=['POST'])
 def upload_image():
@@ -529,7 +533,7 @@ def upload_image():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
 
-        image_url = request.host_url.rstrip('/') + f'/static/uploads/{filename}'
+        image_url = request.host_url.rstrip('/') + f'/uploads/{filename}'
         return jsonify({'image_url': image_url}), 200
 
     return jsonify({'error': 'Invalid file type'}), 400
