@@ -14,10 +14,11 @@ from flask import send_from_directory
 
 
 load_dotenv()
-app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'super-secret-key')
+
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///demo.db"
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'super-secret-key')
 jwt = JWTManager(app)
 db = SQLAlchemy()
 db.init_app(app)
