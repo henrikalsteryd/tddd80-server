@@ -10,6 +10,8 @@ import datetime
 from werkzeug.utils import secure_filename
 from flask_migrate import Migrate
 from flask import send_from_directory
+from datetime import timedelta
+
 
 
 
@@ -19,6 +21,7 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///demo.db"
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'super-secret-key')
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
 jwt = JWTManager(app)
 db = SQLAlchemy()
 db.init_app(app)
