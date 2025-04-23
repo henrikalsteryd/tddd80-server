@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import Mapped, mapped_column
 from flask_jwt_extended import jwt_required, JWTManager
-from flask_jwt_extended import create_access_token, get_jwt_identity,
+from flask_jwt_extended import create_access_token, get_jwt_identity
 from flask_bcrypt import Bcrypt
 import os
 from dotenv import load_dotenv
