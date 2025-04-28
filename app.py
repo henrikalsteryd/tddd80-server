@@ -190,8 +190,7 @@ def user_login():
         return jsonify({'error': 'No such user or wrong password'}), 400
 
     token = create_access_token(identity=u.username)
-    return jsonify({'access_token': token}), 200
-
+    return jsonify({'access_token': token, 'user_id': u.id}), 200
 
 @app.route('/user/logout', methods=['POST'])
 @jwt_required()
@@ -200,6 +199,58 @@ def logout():
     db.session.add(TokenBlocklist(jti=jti))
     db.session.commit()
     return jsonify({"message": "User successfully logged out"}), 200
+
+
+@app.route('/user', methods=['GET'])
+@jwt_required()
+def get_user_profile():
+    username = request.args.get('username')
+
+    if not username:
+        return jsonify({"error": "Missing username"}), 400
+
+    user = User.query.filter_by(username=username).first()
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    followers_count = user.followers.count()
+    following_count = user.following.count()
+    reviews_count = Review.query.filter_by(user_id=user.id, is_recipe=False).count()
+    recipes_count = Review.query.filter_by(user_id=user.id, is_recipe=True).count()
+
+    return jsonify({
+        "user_id": user.id,
+        "username": user.username,
+        "user_description": user.user_description,
+        "followers_count": followers_count,
+        "following_count": following_count,
+        "reviews_count": reviews_count,
+        "recipes_count": recipes_count
+    }), 200
+
+
+@app.route('/user/reviews', methods=['GET'])
+@jwt_required()
+def get_user_reviews():
+    user_id = request.args.get('user_id')
+
+    if not user_id:
+        return jsonify({"error": "Missing user_id"}), 400
+
+    reviews = Review.query.filter_by(user_id=user_id).all()
+
+    reviews_data = [
+        {
+            "review_id": review.id,
+            "drink_name": review.drink_name,
+            "image_url": review.image_url
+        }
+        for review in reviews
+    ]
+
+    return jsonify({"reviews": reviews_data}), 200
+
 
 
 # Discover/find user - handlers
