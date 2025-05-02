@@ -131,6 +131,35 @@ class Review(db.Model):
     # Som standard så är created_at den tiden som databasen sparar den
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
+# Klass för notiser.
+class Notification(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    message = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    
+    user = db.relationship('User', backref=db.backref('notifications', lazy=True))
+
+
+def create_notification(user_id, message):
+    # Hämta användaren från databasen
+    user = db.session.get(User, user_id)
+    
+    if user:
+        # Skapa en ny notis
+        new_notification = Notification(user_id=user_id, message=message)
+        
+        # Lägg till notisen i databasen
+        db.session.add(new_notification)
+        db.session.commit()
+        
+        # Kolla om användaren har fler än 20 notiser
+        notifications_count = Notification.query.filter_by(user_id=user_id).count()
+        if notifications_count > 20:
+            # Ta bort den äldsta notisen
+            oldest_notification = Notification.query.filter_by(user_id=user_id).order_by(Notification.created_at).first()
+            db.session.delete(oldest_notification)
+            db.session.commit()
 
 # Klass för kommentarer
 class Comment(db.Model):
@@ -268,7 +297,6 @@ def get_user_reviews():
     return jsonify({"reviews": reviews_data}), 200
 
 
-
 # Discover/find user - handlers
 @app.route('/discover', methods=['GET'])
 @jwt_required()
@@ -319,6 +347,9 @@ def follow():
 
     follower.follow(following)
     db.session.commit()
+
+    # Skapa en notis för användaren som blir följd
+    create_notification(following.id, f"{follower.username} just started following you!")
 
     return jsonify({"message": f"{follower.username} is now following {following.username}"}), 200
 
@@ -618,6 +649,28 @@ def upload_image():
         return jsonify({'image_url': image_url}), 200
 
     return jsonify({'error': 'Invalid file type'}), 400
+
+# Notifcations GET
+@app.route('/user/notifications', methods=['GET'])
+@jwt_required()
+def get_notifications():
+    user_id = request.args.get('user_id')
+    if not user_id:
+        return jsonify({"error": "Missing user_id"}), 400
+
+    # Hämta de senaste 20 notiserna, sorterade efter skapelsedatum (nyaste först)
+    notifications = Notification.query.filter_by(user_id=user_id).order_by(Notification.created_at.desc()).limit(20).all()
+
+    notifications_data = [
+        {
+            "id": notification.id,
+            "message": notification.message,
+            "created_at": notification.created_at.isoformat()
+        }
+        for notification in notifications
+    ]
+
+    return jsonify({"notifications": notifications_data}), 200
 
 
 # Blocklist loader
