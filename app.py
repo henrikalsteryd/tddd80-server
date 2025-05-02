@@ -74,9 +74,11 @@ class User(db.Model):
         lazy='dynamic'
     )
 
-    def __init__(self, username, password):
+    def __init__(self, username, password, language, dark_mode):
         self.username = username
         self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+        self.language = language
+        self.dark_mode = dark_mode
 
     def to_dict(self):
         return {'user': self.username, 'uid': self.id}
