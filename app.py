@@ -143,6 +143,7 @@ class Notification(db.Model):
 
 def create_notification(user_id, message):
     # Hämta användaren från databasen
+    # Det är bara relevant att spara 20 notifikationer, därför raderar vi om det är över 30.
     user = db.session.get(User, user_id)
     
     if user:
@@ -349,7 +350,7 @@ def follow():
     db.session.commit()
 
     # Skapa en notis för användaren som blir följd
-    create_notification(following.id, f"{follower.username} just started following you!")
+    create_notification(following.id, f"{follower.username} just started following you")
 
     return jsonify({"message": f"{follower.username} is now following {following.username}"}), 200
 
@@ -650,7 +651,7 @@ def upload_image():
 
     return jsonify({'error': 'Invalid file type'}), 400
 
-# Notifcations GET
+# Notifcations handler - GET
 @app.route('/user/notifications', methods=['GET'])
 @jwt_required()
 def get_notifications():
@@ -671,6 +672,74 @@ def get_notifications():
     ]
 
     return jsonify({"notifications": notifications_data}), 200
+
+
+# Feed handler - GET
+@app.route('/user/recent_posts', methods=['GET'])
+@jwt_required()
+def get_recent_posts():
+    # Hämta user_id från query-parametern
+    user_id = request.args.get('user_id')
+
+    if not user_id:
+        return jsonify({"error": "User ID is required"}), 400
+
+    # Hämta användaren från user_id
+    current_user = User.query.get(user_id)
+
+    if not current_user:
+        return jsonify({"error": "User not found"}), 404
+
+    # Hämta alla användare som den aktuella användaren följer
+    followed_users = current_user.following.all()
+
+    all_posts = []
+    
+    # Hämta alla posts för de användare som följs
+    for user in followed_users:
+        posts = Review.query.filter_by(user_id=user.id).all()  # Hämta recensioner (posts) från följda användare
+        all_posts.extend(posts)
+
+    # Sortera inläggen på tidsstämpel (nyast först)
+    sorted_posts = sorted(all_posts, key=lambda post: post.created_at, reverse=True)
+
+    # Ta de 30 senaste inläggen
+    recent_posts = sorted_posts[:30]
+
+    # Förbered datat som ska returneras
+    posts_data = []
+    for post in recent_posts:
+        # Hämta användarnamn för posten
+        user = User.query.get(post.user_id)
+        if user:
+            # Räkna likes
+            like_count = db.session.execute(
+                db.select(db.func.count()).select_from(likes).where(likes.c.review_id == post.id)
+            ).scalar()
+
+            # Räkna kommentarer
+            comment_count = db.session.execute(
+                db.select(db.func.count()).select_from(Comment).where(Comment.review_id == post.id)
+            ).scalar()
+
+            posts_data.append({
+                "post_id": post.id,
+                "username": user.username,
+                "drink_name": post.drink_name,
+                "rating": post.rating,
+                "review_text": post.review_text,
+                "image_url": post.image_url,
+                "created_at": post.created_at.isoformat(),
+                "is_recipe": post.is_recipe,
+                "like_count": like_count,
+                "comment_count": comment_count
+            })
+
+    # Skicka tillbaka data med user_id som query-parameter
+    return jsonify({
+        "user_id": user_id,
+        "recent_posts": posts_data
+    }), 200
 
 
 # Blocklist loader
