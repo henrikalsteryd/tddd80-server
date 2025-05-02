@@ -242,7 +242,7 @@ def user_login():
     return jsonify({
         'access_token': token, 
         'user_id': u.id, 
-        'dark_mode': u.dark_mode  # Lägg till dark_mode-inställningen här
+        'dark_mode': u.dark_mode,  # Lägg till dark_mode-inställningen här
         'language': u.language  # Lägg till dark_mode-inställningen här
     }), 200
 
