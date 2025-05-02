@@ -253,8 +253,18 @@ def user_login():
 @jwt_required()
 def logout():
     jti = get_jwt_identity()
+
+    # Kontrollera om jti redan finns i token_blocklist
+    existing_token = TokenBlocklist.query.filter_by(jti=jti).first()
+
+    if existing_token:
+        # Om tokenet redan är blockerad, returnera ett meddelande, men godkän utloggningen.
+        return jsonify({"message": "User already logged out"}), 200 
+
+    # Lägg till tokenet i blocklistan
     db.session.add(TokenBlocklist(jti=jti))
     db.session.commit()
+
     return jsonify({"message": "User successfully logged out"}), 200
 
 
