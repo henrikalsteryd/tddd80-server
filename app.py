@@ -552,6 +552,7 @@ def delete_comment():
 
 # Hämta alla kommentarer för en review
 @app.route('/review/comments', methods=['GET'])
+@jwt_required()
 def get_comments():
     review_id = request.args.get("review_id")
 
