@@ -799,12 +799,10 @@ def method_not_allowed(error):
 def internal_server_error(error):
     return jsonify({"error": "Server error"}), 500
 
-# Ta bort databasen (om du vill radera den för att skapa om den)
-if os.path.exists('app.db'):  # eller din databasfil
-    os.remove('app.db')
 
 with app.app_context():
-    db.create_all()
+    db.drop_all()  # Radera alla tabeller
+    db.create_all()  # Skapa alla tabeller på nytt
 
  # if __name__ == "__main__":
     # print(f"[DEBUG] Använder databas: {app.config['SQLALCHEMY_DATABASE_URI']}")
