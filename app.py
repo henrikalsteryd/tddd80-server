@@ -58,7 +58,7 @@ class User(db.Model):
     username: Mapped[str] = mapped_column(unique=True)
     password_hash: Mapped[str] = mapped_column(nullable=False)
     user_description = db.Column(db.String(100), nullable=True)
-    dark_mode = db.Column(db.Boolean, default=False)
+    dark_mode = db.Column(db.Boolean, default=False, nullable=False)
 
     followers = db.relationship(
         'User',
@@ -799,6 +799,9 @@ def method_not_allowed(error):
 def internal_server_error(error):
     return jsonify({"error": "Server error"}), 500
 
+# Ta bort databasen (om du vill radera den för att skapa om den)
+if os.path.exists('app.db'):  # eller din databasfil
+    os.remove('app.db')
 
 with app.app_context():
     db.create_all()
