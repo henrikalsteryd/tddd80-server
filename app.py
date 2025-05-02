@@ -60,6 +60,7 @@ class User(db.Model):
     username: Mapped[str] = mapped_column(unique=True)
     password_hash: Mapped[str] = mapped_column(nullable=False)
     user_description = db.Column(db.String(100), nullable=True)
+    dark_mode = db.Column(Boolean, default=False)
 
     followers = db.relationship(
         'User',
@@ -209,18 +210,31 @@ def create_user():
 @app.route('/user/login', methods=['POST'])
 def user_login():
     data = request.get_json()
+    
+    # Kontrollera om username och password är angivna
     if not data or 'username' not in data or 'password' not in data:
         return jsonify({'error': 'Username and password are required'}), 400
 
     username = data['username']
     password = data['password']
+    
+    # Hämta användaren från databasen baserat på användarnamn
     u = User.query.filter_by(username=username).first()
 
+    # Kontrollera om användaren inte finns eller om lösenordet är felaktigt
     if u is None or not bcrypt.check_password_hash(u.password_hash, password):
         return jsonify({'error': 'No such user or wrong password'}), 400
 
+    # Skapa en access token för användaren
     token = create_access_token(identity=u.username)
-    return jsonify({'access_token': token, 'user_id': u.id}), 200
+
+    # Skicka tillbaka token, användar-ID och dark mode-inställning
+    return jsonify({
+        'access_token': token, 
+        'user_id': u.id, 
+        'dark_mode': u.dark_mode  # Lägg till dark_mode-inställningen här
+    }), 200
+
 
 @app.route('/user/logout', methods=['POST'])
 @jwt_required()
