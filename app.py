@@ -389,7 +389,7 @@ def create_review():
             "image_url": new_review.image_url,
             "created_at": new_review.created_at.isoformat()
         }
-    }), 201
+    }), 200
 
 
 @app.route('/review/delete', methods=['DELETE'])
