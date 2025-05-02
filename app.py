@@ -206,7 +206,7 @@ def create_user():
             return jsonify({'error': 'Username already exists'}), 400
 
         # Skapa den nya användaren
-        new_user = User(username=username, password_hash=password, language=language, dark_mode=dark_mode)
+        new_user = User(username=username, password=password, language=language, dark_mode=dark_mode)
         db.session.add(new_user)
         db.session.commit()
 
