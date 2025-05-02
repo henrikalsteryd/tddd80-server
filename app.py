@@ -189,25 +189,32 @@ class TokenBlocklist(db.Model):
 def create_user():
     try:
         data = request.get_json()
-        print(data)  # Debug-print
 
         if not data or 'username' not in data or 'password' not in data:
             return jsonify({'error': 'Username and password are required'}), 400
 
         username = data['username']
         password = data['password']
+        
+        # Hämta språk och dark_mode, använd default om de inte finns
+        language = data.get('language', 'en')  # Standardvärde 'en' om inget anges
+        dark_mode = data.get('dark_mode', False)  # Standardvärde False om inget anges
+
+        # Kontrollera om användarnamnet redan finns
         existing_user = db.session.execute(db.select(User).filter_by(username=username)).scalar_one_or_none()
         if existing_user:
             return jsonify({'error': 'Username already exists'}), 400
 
-        new_user = User(username=username, password=password)
+        # Skapa den nya användaren
+        new_user = User(username=username, password_hash=password, language=language, dark_mode=dark_mode)
         db.session.add(new_user)
         db.session.commit()
 
         return jsonify({'message': f'User {new_user.username} created', 'user_id': new_user.id}), 200
-
+    
     except Exception as e:
-        return jsonify({'error': f'Server error: {str(e)}'}), 500
+        return jsonify({'error': str(e)}), 500
+
 
 
 @app.route('/user/login', methods=['POST'])
@@ -236,6 +243,7 @@ def user_login():
         'access_token': token, 
         'user_id': u.id, 
         'dark_mode': u.dark_mode  # Lägg till dark_mode-inställningen här
+        'language': u.language  # Lägg till dark_mode-inställningen här
     }), 200
 
 
