@@ -204,20 +204,33 @@ def logout():
 @app.route('/user', methods=['GET'])
 @jwt_required()
 def get_user_profile():
-    username = request.args.get('username')
+    username = request.args.get('username')  # den profil vi tittar på
+    viewer_username = request.args.get('viewer_username')  # den som tittar (valfri)
 
     if not username:
         return jsonify({"error": "Missing username"}), 400
 
     user = User.query.filter_by(username=username).first()
-
     if not user:
         return jsonify({"error": "User not found"}), 404
 
+    # Grundläggande användardata
     followers_count = user.followers.count()
     following_count = user.following.count()
     reviews_count = Review.query.filter_by(user_id=user.id, is_recipe=False).count()
     recipes_count = Review.query.filter_by(user_id=user.id, is_recipe=True).count()
+
+    # Extra relationsdata om viewer_username är medskickad
+    is_following = False
+    is_followed_by = False
+    is_friend = False
+
+    if viewer_username:
+        viewer = User.query.filter_by(username=viewer_username).first()
+        if viewer:
+            is_following = viewer.is_following(user)
+            is_followed_by = user.is_following(viewer)
+            is_friend = is_following and is_followed_by
 
     return jsonify({
         "user_id": user.id,
@@ -226,7 +239,10 @@ def get_user_profile():
         "followers_count": followers_count,
         "following_count": following_count,
         "reviews_count": reviews_count,
-        "recipes_count": recipes_count
+        "recipes_count": recipes_count,
+        "is_following": is_following,
+        "is_followed_by": is_followed_by,
+        "is_friend": is_friend
     }), 200
 
 
