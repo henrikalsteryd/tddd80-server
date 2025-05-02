@@ -418,6 +418,7 @@ def delete_review():
 
 
 # Get a specific post
+@jwt_required()
 @app.route('/review/get', methods=['POST'])
 def get_review():
     data = request.get_json()
@@ -431,6 +432,12 @@ def get_review():
     if not review:
         return jsonify({"error": "Review not found"}), 404
 
+    # Hämta användarnamnet för recensionen
+    user = db.session.get(User, review.user_id)
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
     # Räkna antal likes
     like_count = db.session.execute(
         db.select(db.func.count()).select_from(likes).where(likes.c.review_id == review_id)
@@ -439,6 +446,7 @@ def get_review():
     return jsonify({
         "id": review.id,
         "user_id": review.user_id,
+        "username": user.username,  # Lägg till användarnamnet här
         "drink_name": review.drink_name,
         "rating": review.rating,
         "review_text": review.review_text,
@@ -446,6 +454,7 @@ def get_review():
         "created_at": review.created_at.isoformat(),
         "likes": like_count
     }), 200
+
 
 
 # Comment ADD/REMOVE/GET all (för en specifik review) - handlers
