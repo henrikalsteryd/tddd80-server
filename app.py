@@ -455,9 +455,10 @@ def delete_review():
 def get_review():
     data = request.get_json()
     review_id = data.get("review_id")
+    user_id = data.get("user_id")  # Vi får user_id från requesten istället för från JWT.
 
-    if not review_id:
-        return jsonify({"error": "Missing review_id"}), 400
+    if not review_id or not user_id:
+        return jsonify({"error": "Missing review_id or user_id"}), 400
 
     review = db.session.get(Review, review_id)
 
@@ -469,6 +470,15 @@ def get_review():
 
     if not user:
         return jsonify({"error": "User not found"}), 404
+
+    # Hämta den användare som skickades med och kontrollera om den har gillat recensionen
+    target_user = db.session.get(User, user_id)
+
+    if not target_user:
+        return jsonify({"error": "Target user not found"}), 404
+
+    # Kontrollera om den angivna användaren har gillat denna recension
+    has_liked = target_user.has_liked_review(review)
 
     # Räkna antal likes
     like_count = db.session.execute(
@@ -484,9 +494,9 @@ def get_review():
         "review_text": review.review_text,
         "image_url": review.image_url,
         "created_at": review.created_at.isoformat(),
-        "likes": like_count
+        "likes": like_count,
+        "has_liked": has_liked  # Lägg till om användaren har gillat recensionen
     }), 200
-
 
 
 # Comment ADD/REMOVE/GET all (för en specifik review) - handlers
