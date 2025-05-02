@@ -11,8 +11,7 @@ from werkzeug.utils import secure_filename
 from flask_migrate import Migrate
 from flask import send_from_directory
 from datetime import timedelta
-
-
+from sqlalchemy import Boolean
 
 
 load_dotenv()
