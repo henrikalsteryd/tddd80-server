@@ -58,7 +58,12 @@ class User(db.Model):
     username: Mapped[str] = mapped_column(unique=True)
     password_hash: Mapped[str] = mapped_column(nullable=False)
     user_description = db.Column(db.String(100), nullable=True)
+
+    # Hantering för dark mode
     dark_mode = db.Column(db.Boolean, default=False, nullable=False)
+
+    # Hantering för språk
+    language = db.Column(db.String(2), default='en', nullable=False)
 
     followers = db.relationship(
         'User',
