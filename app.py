@@ -521,6 +521,9 @@ def add_comment():
     db.session.add(new_comment)
     db.session.commit()
 
+    # Skapa en notis för användaren som har reviewn.
+    create_notification(review.user_id, f"{user.username} just started commented '{comment_text} on your review.'")
+
     return jsonify({
         "message": "Comment added successfully",
         "comment": {
@@ -610,6 +613,9 @@ def like_review():
 
     user.like_review(review)
     db.session.commit()
+
+    # Skapa en notis för användaren som har reviewn.
+    create_notification(review.user_id, f"{user.username} liked your review '{review.drink_name} on your review.'")
 
     return jsonify({"message": f"Review {review.id} liked by {user.username}"}), 200
 
