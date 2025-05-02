@@ -11,7 +11,6 @@ from werkzeug.utils import secure_filename
 from flask_migrate import Migrate
 from flask import send_from_directory
 from datetime import timedelta
-from sqlalchemy import Boolean
 
 
 load_dotenv()
@@ -59,7 +58,7 @@ class User(db.Model):
     username: Mapped[str] = mapped_column(unique=True)
     password_hash: Mapped[str] = mapped_column(nullable=False)
     user_description = db.Column(db.String(100), nullable=True)
-    dark_mode = db.Column(Boolean, default=False)
+    dark_mode = db.Column(db.Boolean, default=False)
 
     followers = db.relationship(
         'User',
