@@ -193,7 +193,7 @@ def create_user():
         dark_mode = data.get('dark_mode', False)  # Standardvärde False om inget anges
 
         # Hämta profile picture som skickas med
-        profile_picture = data.get('profile picture', 'profile_1')  # Standardvärde False om inget anges
+        profile_picture = data.get('profile_picture', 'profile_1')  # Standardvärde False om inget anges
 
         # Kontrollera om användarnamnet redan finns (case-insensitive)
         existing_user = db.session.execute(
