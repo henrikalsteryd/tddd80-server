@@ -61,7 +61,7 @@ class User(db.Model):
     
     dark_mode = db.Column(db.Boolean, default=False, nullable=False)
     language = db.Column(db.String(2), default='en', nullable=False)
-    profile_picture = db.Column(db.String(20), nullable=False)
+    profile_picture = db.Column(db.String(50), nullable=False)
 
     # Users this user is following
     following = db.relationship(
