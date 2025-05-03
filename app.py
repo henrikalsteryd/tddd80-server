@@ -795,6 +795,53 @@ def get_recent_posts():
         "recent_posts": posts_data
     }), 200
 
+# Prefrences POST/GET - Användarens språk, dark_mode etc
+@app.route('/user/prefrences', methods=['GET'])
+@jwt_required()
+def get_user_prefrences():
+    username = request.args.get('username')  # den profil vi tittar på
+
+    if not username:
+        return jsonify({"error": "Missing username"}), 400
+
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    return jsonify({
+        "dark_mode": user.dark_mode,
+        "language": user.language,
+        "user_description": user.user_description,
+    }), 200
+
+
+@app.route('/user/preferences', methods=['POST'])
+@jwt_required()
+def set_user_preferences():
+    data = request.get_json()
+
+    username = data.get('username')
+    dark_mode = data.get('dark_mode')
+    language = data.get('language')
+    user_description = data.get('user_description')
+
+    if not username:
+        return jsonify({"error": "Missing username"}), 400
+
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    if dark_mode is not None:
+        user.dark_mode = dark_mode
+    if language is not None:
+        user.language = language
+    if user_description is not None:
+        user.user_description = user_description
+
+    db.session.commit()
+
+    return jsonify({"message": "Preferences updated successfully"}), 200
 
 # Blocklist loader
 @jwt.token_in_blocklist_loader
