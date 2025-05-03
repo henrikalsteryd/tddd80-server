@@ -58,8 +58,10 @@ class User(db.Model):
     username: Mapped[str] = mapped_column(unique=True)
     password_hash: Mapped[str] = mapped_column(nullable=False)
     user_description = db.Column(db.String(100), nullable=True)
+    
     dark_mode = db.Column(db.Boolean, default=False, nullable=False)
     language = db.Column(db.String(2), default='en', nullable=False)
+    profile_picture = db.Column(db.String(20), nullable=False)
 
     # Users this user is following
     following = db.relationship(
@@ -78,11 +80,12 @@ class User(db.Model):
         lazy='dynamic'
     )
 
-    def __init__(self, username, password, language, dark_mode):
+    def __init__(self, username, password, language, dark_mode, profile_picture):
         self.username = username
         self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
         self.language = language
         self.dark_mode = dark_mode
+        self.profile_picture=profile_picture
 
     def is_following(self, user):
         return self.following.filter(followers_table.c.following_id == user.id).count() > 0
@@ -189,6 +192,9 @@ def create_user():
         language = data.get('language', 'en')  # Standardvärde 'en' om inget anges
         dark_mode = data.get('dark_mode', False)  # Standardvärde False om inget anges
 
+        # Hämta profile picture som skickas med
+        profile_picture = data.get('profile picture', 'profile_1')  # Standardvärde False om inget anges
+
         # Kontrollera om användarnamnet redan finns (case-insensitive)
         existing_user = db.session.execute(
             db.select(User).filter_by(username=username)
@@ -197,7 +203,7 @@ def create_user():
             return jsonify({'error': 'Username already exists'}), 400
 
         # Skapa den nya användaren
-        new_user = User(username=username, password=password, language=language, dark_mode=dark_mode)
+        new_user = User(username=username, password=password, language=language, dark_mode=dark_mode, profile_picture=profile_picture)
         db.session.add(new_user)
         db.session.commit()
 
@@ -900,7 +906,7 @@ def internal_server_error(error):
 
 
 with app.app_context():
-    #db.drop_all()  # Radera alla tabeller
+    db.drop_all()  # Radera alla tabeller
     db.create_all()  # Skapa alla tabeller på nytt
 
  # if __name__ == "__main__":
