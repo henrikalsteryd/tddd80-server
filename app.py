@@ -195,15 +195,18 @@ def create_user():
         if not data or 'username' not in data or 'password' not in data:
             return jsonify({'error': 'Username and password are required'}), 400
 
-        username = data['username']
+        # Normalize username to lowercase så att flera användare inte kan ha samma namn.
+        username = data['username'].strip().lower()
         password = data['password']
         
         # Hämta språk och dark_mode, använd default om de inte finns
         language = data.get('language', 'en')  # Standardvärde 'en' om inget anges
         dark_mode = data.get('dark_mode', False)  # Standardvärde False om inget anges
 
-        # Kontrollera om användarnamnet redan finns
-        existing_user = db.session.execute(db.select(User).filter_by(username=username)).scalar_one_or_none()
+        # Kontrollera om användarnamnet redan finns (case-insensitive)
+        existing_user = db.session.execute(
+            db.select(User).filter_by(username=username)
+        ).scalar_one_or_none()
         if existing_user:
             return jsonify({'error': 'Username already exists'}), 400
 
@@ -213,7 +216,6 @@ def create_user():
         db.session.commit()
 
         return jsonify({'message': f'User {new_user.username} created', 'user_id': new_user.id}), 200
-    
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
