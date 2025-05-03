@@ -900,7 +900,7 @@ def internal_server_error(error):
 
 
 with app.app_context():
-    db.drop_all()  # Radera alla tabeller
+    #db.drop_all()  # Radera alla tabeller
     db.create_all()  # Skapa alla tabeller på nytt
 
  # if __name__ == "__main__":
