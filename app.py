@@ -299,6 +299,7 @@ def get_user_profile():
         "user_id": user.id,
         "username": user.username,
         "user_description": user.user_description,
+        "profile_picture": user.profile_picture,
         "followers_count": followers_count,
         "following_count": following_count,
         "reviews_count": reviews_count,
@@ -353,7 +354,7 @@ def search():
         )
         return jsonify({
             "results": [
-                {"user_id": user.id, "username": user.username}
+                {"user_id": user.id, "username": user.username, "profile_picture": user.profile_picture}
                 for user in results
             ]
         }), 200
