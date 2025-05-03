@@ -329,25 +329,54 @@ def get_user_reviews():
 @app.route('/discover', methods=['GET'])
 @jwt_required()
 def search():
-    query = request.args.get('query', '')
+    query = request.args.get('query', '').strip()
+    category = request.args.get('category', 'Profile').strip()
+    current_user = get_jwt_identity()
 
     if not query:
         return jsonify({"error": "Query parameter is required"}), 400
 
-    # Sök efter användare där username innehåller sökordet (case-insensitive)
-    results = (
-        User.query
-        .filter(User.username.ilike(f"%{query}%"))
-        .limit(25)
-        .all()
-    )
+    if category == 'Profile':
+        # Uteslut den aktuella användaren
+        results = (
+            User.query
+            .filter(User.username.ilike(f"%{query}%"))
+            .filter(User.username != current_user)
+            .limit(25)
+            .all()
+        )
+        return jsonify({
+            "results": [
+                {"user_id": user.id, "username": user.username}
+                for user in results
+            ]
+        }), 200
 
-    return jsonify({
-        "results": [
-            {"user_id": user.id, "username": user.username}
-            for user in results
-        ]
-    }), 200
+    elif category in ['Reviews', 'Recipes']:
+        is_recipe_value = (category == 'Recipes')
+
+        reviews = (
+            Review.query
+            .filter(Review.drink_name.ilike(f"%{query}%"))
+            .filter(Review.is_recipe == is_recipe_value)
+            .limit(25)
+            .all()
+        )
+
+        return jsonify({
+            "results": [
+                {
+                    "review_id": r.id,
+                    "drink_name": r.drink_name,
+                    "username": User.query.get(r.user_id).username,
+                    "image_url": r.image_url
+                }
+                for r in reviews
+            ]
+        }), 200
+
+    else:
+        return jsonify({"error": "Invalid category"}), 400
 
 
 # Following/Unfollowing - handlers
