@@ -38,39 +38,43 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Many-to-Many-tabell för att hantera followers (en följare följer en annan)
-followers = db.Table(
+
+# FOLLOWERS association table
+followers_table = db.Table(
     'followers',
     db.Column('follower_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
     db.Column('following_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
 )
 
-# Many-to-Many-tabell för likes
+# LIKES association table
 likes = db.Table(
     'likes',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
     db.Column('review_id', db.Integer, db.ForeignKey('review.id'), primary_key=True)
 )
 
-
 class User(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     username: Mapped[str] = mapped_column(unique=True)
     password_hash: Mapped[str] = mapped_column(nullable=False)
     user_description = db.Column(db.String(100), nullable=True)
-
-    # Hantering för dark mode
     dark_mode = db.Column(db.Boolean, default=False, nullable=False)
-
-    # Hantering för språk
     language = db.Column(db.String(2), default='en', nullable=False)
 
-    followers = db.relationship(
+    # Users this user is following
+    following = db.relationship(
         'User',
-        secondary=followers,
-        primaryjoin=id == followers.c.following_id,
-        secondaryjoin=id == followers.c.follower_id,
-        backref=db.backref('following', lazy='dynamic'),
+        secondary=followers_table,
+        primaryjoin=(followers_table.c.follower_id == id),
+        secondaryjoin=(followers_table.c.following_id == id),
+        backref=db.backref('followers', lazy='dynamic'),
+        lazy='dynamic'
+    )
+
+    liked_reviews = db.relationship(
+        'Review',
+        secondary=likes,
+        backref=db.backref('liked_by', lazy='dynamic'),
         lazy='dynamic'
     )
 
@@ -80,45 +84,27 @@ class User(db.Model):
         self.language = language
         self.dark_mode = dark_mode
 
-    def to_dict(self):
-        return {'user': self.username, 'uid': self.id}
-
-    # Funktioner kopplade till user-hantering
-    # Retunera true/false baserat på om användare följer
     def is_following(self, user):
-        return user in self.following
+        return self.following.filter(followers_table.c.following_id == user.id).count() > 0
 
-    # Lägg till så att en användare följer en annan
     def follow(self, user):
         if not self.is_following(user):
             self.following.append(user)
 
-    # Ta bort så att en följare inte längre följer någon
     def unfollow(self, user):
         if self.is_following(user):
             self.following.remove(user)
 
-    # Hantera liked_reviews
-    liked_reviews = db.relationship(
-            'Review',
-            secondary=likes,
-            backref=db.backref('liked_by', lazy='dynamic'),
-            lazy='dynamic'
-        )
+    def has_liked_review(self, review):
+        return self.liked_reviews.filter(likes.c.review_id == review.id).count() > 0
 
-    # Funktion för att gilla review
     def like_review(self, review):
         if not self.has_liked_review(review):
             self.liked_reviews.append(review)
 
-    # Funktion för att ta bort sin like
     def unlike_review(self, review):
         if self.has_liked_review(review):
             self.liked_reviews.remove(review)
-
-    # Funktion för att se om någon gillat en
-    def has_liked_review(self, review):
-        return review in self.liked_reviews
 
 
 class Review(db.Model):
@@ -273,23 +259,25 @@ def logout():
 @app.route('/user', methods=['GET'])
 @jwt_required()
 def get_user_profile():
-    username = request.args.get('username')  # den profil vi tittar på
-    viewer_username = request.args.get('viewer_username')  # den som tittar (valfri)
+ 
+    raw_username = request.args.get('username')
+    raw_viewer = request.args.get('viewer_username')
 
-    if not username:
+    if not raw_username:
         return jsonify({"error": "Missing username"}), 400
 
+    username = raw_username.strip().lower()
+    viewer_username = raw_viewer.strip().lower() if raw_viewer else None
+   
     user = User.query.filter_by(username=username).first()
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    # Grundläggande användardata
     followers_count = user.followers.count()
     following_count = user.following.count()
     reviews_count = Review.query.filter_by(user_id=user.id, is_recipe=False).count()
     recipes_count = Review.query.filter_by(user_id=user.id, is_recipe=True).count()
 
-    # Extra relationsdata om viewer_username är medskickad
     is_following = False
     is_followed_by = False
     is_friend = False
@@ -372,25 +360,19 @@ def follow():
 
     if not follower_id or not following_id:
         return jsonify({"error": "Missing follower_id or following_id"}), 400
-
     if follower_id == following_id:
         return jsonify({"error": "You cannot follow yourself"}), 400
 
     follower = db.session.get(User, follower_id)
     following = db.session.get(User, following_id)
-
     if not follower or not following:
         return jsonify({"error": "User not found"}), 404
-
     if follower.is_following(following):
         return jsonify({"message": "Already following"}), 400
 
     follower.follow(following)
     db.session.commit()
-
-    # Skapa en notis för användaren som blir följd
     create_notification(following.id, f"{follower.username} just started following you")
-
     return jsonify({"message": f"{follower.username} is now following {following.username}"}), 200
 
 
@@ -406,16 +388,13 @@ def unfollow():
 
     follower = db.session.get(User, follower_id)
     following = db.session.get(User, following_id)
-
     if not follower or not following:
         return jsonify({"error": "User not found"}), 404
-
     if not follower.is_following(following):
         return jsonify({"message": "Not following this user"}), 400
 
     follower.unfollow(following)
     db.session.commit()
-
     return jsonify({"message": f"{follower.username} has unfollowed {following.username}"}), 200
 
 
