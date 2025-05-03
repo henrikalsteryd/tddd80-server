@@ -402,32 +402,45 @@ def unfollow():
 @app.route('/review/create', methods=['POST'])
 @jwt_required()
 def create_review():
-    data = request.get_json()
+    data = request.get_json() or {}
+
+    # Ta emot alla fält, med default-värden där det är lämpligt
     user_id = data.get("user_id")
     drink_name = data.get("drink_name")
     rating = data.get("rating")
     review_text = data.get("review_text")
     image_url = data.get("image_url")
+    is_recipe = data.get("is_recipe", False)
+    location_city = data.get("location_city")       # None om inte skickas
+    location_name = data.get("location_name")       # None om inte skickas
 
+    # Kontroll: obligatoriska fält
     if not user_id or not drink_name or rating is None:
-        return jsonify({"error": "Missing required fields (user_id, drink_name, rating)"}), 400
+        return jsonify({
+            "error": "Missing required fields (user_id, drink_name, rating)"
+        }), 400
 
+    # Hämta användaren
     user = db.session.get(User, user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    # Skapa en ny review
+    # Skapa och spara review/recipe
     new_review = Review(
         user_id=user_id,
         drink_name=drink_name,
         rating=rating,
         review_text=review_text,
-        image_url=image_url
+        image_url=image_url,
+        is_recipe=bool(is_recipe),
+        location_city=location_city,
+        location_name=location_name
     )
 
     db.session.add(new_review)
     db.session.commit()
 
+    # Returnera det nya objektet – inklusive de nya fälten
     return jsonify({
         "message": "Review created successfully",
         "review": {
@@ -437,9 +450,13 @@ def create_review():
             "rating": new_review.rating,
             "review_text": new_review.review_text,
             "image_url": new_review.image_url,
+            "is_recipe": new_review.is_recipe,
+            "location_city": new_review.location_city,
+            "location_name": new_review.location_name,
             "created_at": new_review.created_at.isoformat()
         }
     }), 200
+
 
 
 @app.route('/review/delete', methods=['DELETE'])
