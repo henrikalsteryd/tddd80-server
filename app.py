@@ -134,7 +134,7 @@ class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     message = db.Column(db.String(255), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now(TIMEZONE))
     
     user = db.relationship('User', backref=db.backref('notifications', lazy=True))
 
@@ -166,7 +166,7 @@ class Comment(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     review_id = db.Column(db.Integer, db.ForeignKey('review.id'), nullable=False)
     comment_text = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default= )
+    created_at = db.Column(db.DateTime, default= datetime.datetime.now(TIMEZONE))
 
     user = db.relationship('User', backref='comments')
     review = db.relationship('Review', backref=db.backref('comments', lazy='dynamic'))
@@ -175,7 +175,7 @@ class Comment(db.Model):
 class TokenBlocklist(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     jti: Mapped[str] = mapped_column(unique=True, nullable=False)
-    created_at: Mapped[datetime.datetime] = mapped_column(nullable=False, default= )
+    created_at: Mapped[datetime.datetime] = mapped_column(nullable=False, default= datetime.datetime.now(TIMEZONE))
 
 
 # Login/Logut/Create user - handlers 
