@@ -11,10 +11,13 @@ from werkzeug.utils import secure_filename
 from flask_migrate import Migrate
 from flask import send_from_directory
 from datetime import timedelta
+import pytz
+
 
 
 load_dotenv()
 
+TIMEZONE = pytz.timezone(os.getenv('TZ', 'Europe/Stockholm'))
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///demo.db"
@@ -124,7 +127,7 @@ class Review(db.Model):
     location_name = db.Column(db.String(100), nullable=True)
 
     # Som standard så är created_at den tiden som databasen sparar den
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    created_at = db.Column(db.DateTime, default= datetime.datetime.now(TIMEZONE))
 
 # Klass för notiser.
 class Notification(db.Model):
@@ -163,7 +166,7 @@ class Comment(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     review_id = db.Column(db.Integer, db.ForeignKey('review.id'), nullable=False)
     comment_text = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    created_at = db.Column(db.DateTime, default= )
 
     user = db.relationship('User', backref='comments')
     review = db.relationship('Review', backref=db.backref('comments', lazy='dynamic'))
@@ -172,7 +175,7 @@ class Comment(db.Model):
 class TokenBlocklist(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     jti: Mapped[str] = mapped_column(unique=True, nullable=False)
-    created_at: Mapped[datetime.datetime] = mapped_column(nullable=False, default=datetime.datetime.utcnow)
+    created_at: Mapped[datetime.datetime] = mapped_column(nullable=False, default= )
 
 
 # Login/Logut/Create user - handlers 
