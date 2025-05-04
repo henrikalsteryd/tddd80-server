@@ -65,6 +65,7 @@ class User(db.Model):
     dark_mode = db.Column(db.Boolean, default=False, nullable=False)
     language = db.Column(db.String(2), default='en', nullable=False)
     profile_picture = db.Column(db.String(50), nullable=False)
+    accessibility = db.Column(db.Double, nullable=True)
 
     # Users this user is following
     following = db.relationship(
@@ -83,12 +84,13 @@ class User(db.Model):
         lazy='dynamic'
     )
 
-    def __init__(self, username, password, language, dark_mode, profile_picture):
+    def __init__(self, username, password, language, dark_mode, profile_picture, accessibility):
         self.username = username
         self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
         self.language = language
         self.dark_mode = dark_mode
         self.profile_picture=profile_picture
+        self.accessibility=accessibility
 
     def is_following(self, user):
         return self.following.filter(followers_table.c.following_id == user.id).count() > 0
@@ -198,6 +200,9 @@ def create_user():
         # Hämta profile picture som skickas med
         profile_picture = data.get('profile_picture', 'profile_1')  # Standardvärde False om inget anges
 
+        # Hämta accessibility (eller använd standardvärde)
+        accessibility = data.get('accessibility', 1.0)  # Standardvärde 1.0 (100%) om inget anges
+
         # Kontrollera om användarnamnet redan finns (case-insensitive)
         existing_user = db.session.execute(
             db.select(User).filter_by(username=username)
@@ -206,14 +211,14 @@ def create_user():
             return jsonify({'error': 'Username already exists'}), 400
 
         # Skapa den nya användaren
-        new_user = User(username=username, password=password, language=language, dark_mode=dark_mode, profile_picture=profile_picture)
+        new_user = User(username=username, password=password, language=language, dark_mode=dark_mode, 
+                        profile_picture=profile_picture, accessibility=accessibility)
         db.session.add(new_user)
         db.session.commit()
 
         return jsonify({'message': f'User {new_user.username} created', 'user_id': new_user.id}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
 
 
 @app.route('/user/login', methods=['POST'])
@@ -243,6 +248,7 @@ def user_login():
         'user_id': u.id, 
         'dark_mode': u.dark_mode,  # Lägg till dark_mode-inställningen här
         'language': u.language  # Lägg till dark_mode-inställningen här
+        'accessibility': u.accessibility
     }), 200
 
 
@@ -851,6 +857,7 @@ def get_user_prefrences():
         "dark_mode": user.dark_mode,
         "language": user.language,
         "user_description": user.user_description,
+        "accessibility": user.accessibility
     }), 200
 
 
@@ -863,6 +870,7 @@ def set_user_preferences():
     dark_mode = data.get('dark_mode')
     language = data.get('language')
     user_description = data.get('user_description')
+    accessibility = data.get('accessibility')
 
     if not username:
         return jsonify({"error": "Missing username"}), 400
@@ -877,6 +885,8 @@ def set_user_preferences():
         user.language = language
     if user_description is not None:
         user.user_description = user_description
+    if accessibility is not None:
+        user.accessibility = accessibility
 
     db.session.commit()
 
