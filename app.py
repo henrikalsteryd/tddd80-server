@@ -573,6 +573,7 @@ def get_review():
         "rating": review.rating,
         "review_text": review.review_text,
         "image_url": review.image_url,
+        "location_name": review.location_name,
         "created_at": review.created_at.isoformat(),
         "likes": like_count,
         "has_liked": has_liked  # Lägg till om användaren har gillat recensionen
