@@ -247,7 +247,7 @@ def user_login():
         'access_token': token, 
         'user_id': u.id, 
         'dark_mode': u.dark_mode,  # Lägg till dark_mode-inställningen här
-        'language': u.language  # Lägg till dark_mode-inställningen här
+        'language': u.language,  # Lägg till dark_mode-inställningen här
         'accessibility': u.accessibility
     }), 200
 
