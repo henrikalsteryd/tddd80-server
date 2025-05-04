@@ -719,10 +719,12 @@ def unlike_review():
     return jsonify({"message": f"Review {review.id} unliked by {user.username}"}), 200
 
 @app.route('/uploads/<filename>')
+@jwt_required()
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 @app.route('/upload_image', methods=['POST'])
+@jwt_required()
 def upload_image():
     if 'image' not in request.files:
         return jsonify({'error': 'No image provided'}), 400
