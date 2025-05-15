@@ -62,7 +62,8 @@ likes = db.Table(
 blocked_users = db.Table(
     'blocked_users',
     db.Column('blocker_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
-    db.Column('blocked_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    db.Column('blocked_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    extend_existing=True 
 )
 
 class User(db.Model):
