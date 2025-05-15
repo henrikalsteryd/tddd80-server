@@ -49,7 +49,6 @@ followers_table = db.Table(
     db.Column('following_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
 )
 
-
 # LIKES association table
 likes = db.Table(
     'likes',
@@ -114,6 +113,7 @@ class User(db.Model):
     def unlike_review(self, review):
         if self.has_liked_review(review):
             self.liked_reviews.remove(review)
+
 
 class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -341,30 +341,40 @@ def get_user_reviews():
     return jsonify({"reviews": reviews_data}), 200
 
 
+# Discover/find user - handlers
 @app.route('/discover', methods=['GET'])
 @jwt_required()
 def search():
     query = request.args.get('query', '').strip()
     category = request.args.get('category', 'Profile').strip()
-    current_user_id = get_jwt_identity()
+    current_user = get_jwt_identity()
 
     if not query:
         return jsonify({"error": "Query parameter is required"}), 400
 
-    current_user = db.session.get(User, current_user_id)
-
     if category == 'Profile':
-        # Hämta ID:n för alla du har blockerat
-        blocked_ids = [u.id for u in current_user.blocked]
-        # Hämta ID:n för alla som har blockerat dig
-        blocked_by_ids = [u.id for u in current_user.blocked_by]
-
+        # Uteslut den aktuella användaren
         results = (
             User.query
             .filter(User.username.ilike(f"%{query}%"))
-            .filter(User.username != current_user.username)
-            .filter(~User.id.in_(blocked_ids))       # du har blockerat dem
-            .filter(~User.id.in_(blocked_by_ids))    # de har blockerat dig
+            .filter(User.username != current_user)
+            .limit(25)
+            .all()
+        )
+        return jsonify({
+            "results": [
+                {"user_id": user.id, "username": user.username, "profile_picture": user.profile_picture}
+                for user in results
+            ]
+        }), 200
+
+    elif category in ['Reviews', 'Recipes']:
+        is_recipe_value = (category == 'Recipes')
+
+        reviews = (
+            Review.query
+            .filter(Review.drink_name.ilike(f"%{query}%"))
+            .filter(Review.is_recipe == is_recipe_value)
             .limit(25)
             .all()
         )
@@ -372,13 +382,17 @@ def search():
         return jsonify({
             "results": [
                 {
-                    "user_id": user.id,
-                    "username": user.username,
-                    "profile_picture": user.profile_picture
+                    "review_id": r.id,
+                    "drink_name": r.drink_name,
+                    "username": User.query.get(r.user_id).username,
+                    "image_url": r.image_url
                 }
-                for user in results
+                for r in reviews
             ]
         }), 200
+
+    else:
+        return jsonify({"error": "Invalid category"}), 400
 
 
 # Following/Unfollowing - handlers
