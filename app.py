@@ -513,13 +513,17 @@ def unblock_user():
 @app.route('/user/blocklist', methods=['GET'])
 @jwt_required()
 def get_blocklist():
-    current_user_id = get_jwt_identity()
-    current_user = db.session.get(User, current_user_id)
+    data = request.get_json(silent=True) or {}
+    current_user_id = data.get("user_id")
 
+    if not current_user_id:
+        return jsonify({"error": "Missing user_id"}), 400
+
+    current_user = db.session.get(User, current_user_id)
     if not current_user:
         return jsonify({"error": "User not found"}), 404
 
-    blocked_users = current_user.blocked.all()  # Lazy='dynamic', så .all() behövs
+    blocked_users = current_user.blocked.all()
 
     result = [
         {
