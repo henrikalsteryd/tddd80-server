@@ -57,15 +57,6 @@ likes = db.Table(
     db.Column('review_id', db.Integer, db.ForeignKey('review.id'), primary_key=True)
 )
 
-
-# BLOCKED_USERS association table
-blocked_users = db.Table(
-    'blocked_users',
-    db.Column('blocker_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
-    db.Column('blocked_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
-    extend_existing=True 
-)
-
 class User(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     username: Mapped[str] = mapped_column(unique=True)
@@ -85,13 +76,6 @@ class User(db.Model):
         secondaryjoin=(followers_table.c.following_id == id),
         backref=db.backref('followers', lazy='dynamic'),
         lazy='dynamic'
-    )
-
-    # BLOCKED_USERS association table
-    blocked_users = db.Table(
-        'blocked_users',
-        db.Column('blocker_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
-        db.Column('blocked_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
     )
 
     liked_reviews = db.relationship(
@@ -130,17 +114,6 @@ class User(db.Model):
     def unlike_review(self, review):
         if self.has_liked_review(review):
             self.liked_reviews.remove(review)
-
-    def is_blocking(self, user):
-        return self.blocked.filter(blocked_users.c.blocked_id == user.id).count() > 0
-
-    def block(self, user):
-        if not self.is_blocking(user):
-            self.blocked.append(user)
-
-    def unblock(self, user):
-        if self.is_blocking(user):
-            self.blocked.remove(user)
 
 class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -454,88 +427,6 @@ def unfollow():
     follower.unfollow(following)
     db.session.commit()
     return jsonify({"message": f"{follower.username} has unfollowed {following.username}"}), 200
-
-# Block POST/GET - handlers
-@app.route('/user/block', methods=['POST'])
-@jwt_required()
-def block_user():
-    data = request.get_json()
-    blocker_id = data.get("blocker_id")
-    blocked_id = data.get("blocked_id")
-
-    if not blocker_id or not blocked_id:
-        return jsonify({"error": "Missing blocker_id or blocked_id"}), 400
-    if blocker_id == blocked_id:
-        return jsonify({"error": "You cannot block yourself"}), 400
-
-    blocker = db.session.get(User, blocker_id)
-    blocked = db.session.get(User, blocked_id)
-
-    if not blocker or not blocked:
-        return jsonify({"error": "User not found"}), 404
-    if blocker.is_blocking(blocked):
-        return jsonify({"message": "Already blocked"}), 400
-
-    # Block the user
-    blocker.block(blocked)
-
-    # Optional: remove from followers/following if blocking
-    if blocker.is_following(blocked):
-        blocker.unfollow(blocked)
-    if blocked.is_following(blocker):
-        blocked.unfollow(blocker)
-
-    db.session.commit()
-    return jsonify({"message": f"{blocker.username} has blocked {blocked.username}"}), 200
-
-@app.route('/user/unblock', methods=['POST'])
-@jwt_required()
-def unblock_user():
-    data = request.get_json()
-    blocker_id = data.get("blocker_id")
-    blocked_id = data.get("blocked_id")
-
-    if not blocker_id or not blocked_id:
-        return jsonify({"error": "Missing blocker_id or blocked_id"}), 400
-
-    blocker = db.session.get(User, blocker_id)
-    blocked = db.session.get(User, blocked_id)
-
-    if not blocker or not blocked:
-        return jsonify({"error": "User not found"}), 404
-    if not blocker.is_blocking(blocked):
-        return jsonify({"message": "This user is not blocked"}), 400
-
-    blocker.unblock(blocked)
-    db.session.commit()
-    return jsonify({"message": f"{blocker.username} has unblocked {blocked.username}"}), 200
-
-
-@app.route('/user/blocklist', methods=['GET'])
-@jwt_required()
-def get_blocklist():
-    data = request.get_json(silent=True) or {}
-    current_user_id = data.get("user_id")
-
-    if not current_user_id:
-        return jsonify({"error": "Missing user_id"}), 400
-
-    current_user = db.session.get(User, current_user_id)
-    if not current_user:
-        return jsonify({"error": "User not found"}), 404
-
-    blocked_users = current_user.blocked.all()
-
-    result = [
-        {
-            "user_id": user.id,
-            "username": user.username,
-            "profile_picture": user.profile_picture
-        }
-        for user in blocked_users
-    ]
-
-    return jsonify({"blocklist": result}), 200
 
 
 # Review POST/GET - handlers
