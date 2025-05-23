@@ -141,12 +141,16 @@ class Notification(db.Model):
     user = db.relationship('User', backref=db.backref('notifications', lazy=True))
 
 
-def create_notification(user_id, message):
+def create_notification(user_id, message, username):
     # Hämta användaren från databasen
-    # Det är bara relevant att spara 20 notifikationer, därför raderar vi om det är över 30.
     user = db.session.get(User, user_id)
     
     if user:
+        # Kolla om username matchar användarens username (alltså att användaren försöker skapa notis till sig själv)
+        if user.username == username:
+            # Om samma användare, gör inget
+            return
+        
         # Skapa en ny notis
         new_notification = Notification(user_id=user_id, message=message)
         
@@ -161,6 +165,7 @@ def create_notification(user_id, message):
             oldest_notification = Notification.query.filter_by(user_id=user_id).order_by(Notification.created_at).first()
             db.session.delete(oldest_notification)
             db.session.commit()
+
 
 # Klass för kommentarer
 class Comment(db.Model):
@@ -417,7 +422,7 @@ def follow():
 
     follower.follow(following)
     db.session.commit()
-    create_notification(following.id, f"{follower.username} just started following you")
+    create_notification(following.id, f"{follower.username} just started following you", follower.username)
     return jsonify({"message": f"{follower.username} is now following {following.username}"}), 200
 
 
@@ -603,7 +608,7 @@ def add_comment():
     db.session.commit()
 
     # Skapa en notis för användaren som har reviewn.
-    create_notification(review.user_id, f"{user.username} commented '{comment_text}' on your review.")
+    create_notification(review.user_id, f"{user.username} commented '{comment_text}' on your review.", user.username)
 
     return jsonify({
         "message": "Comment added successfully",
@@ -696,7 +701,7 @@ def like_review():
     db.session.commit()
 
     # Skapa en notis för användaren som har reviewn.
-    create_notification(review.user_id, f"{user.username} liked your review '{review.drink_name}'")
+    create_notification(review.user_id, f"{user.username} liked your review '{review.drink_name}'", user.username)
 
     return jsonify({"message": f"Review {review.id} liked by {user.username}"}), 200
 
